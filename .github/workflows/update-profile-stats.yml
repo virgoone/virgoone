@@ -8,6 +8,7 @@ on:
     paths:
       - README.md
       - assets/**
+      - scripts/**
       - .github/workflows/update-profile-stats.yml
   schedule:
     - cron: "0 3 * * *"
@@ -26,50 +27,21 @@ jobs:
       - name: Fetch SVG stats
         env:
           USERNAME: virgoone
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          mkdir -p assets
+          cp assets/github-stats.svg assets/github-stats.svg.bak || true
+          cp assets/top-langs.svg assets/top-langs.svg.bak || true
 
-          stats_tmp="$(mktemp)"
-          langs_tmp="$(mktemp)"
-          fetch_svg() {
-            local url="$1"
-            local tmp_file="$2"
-            local dest_file="$3"
+          if ! python3 scripts/generate_profile_stats.py --username "${USERNAME}"; then
+            echo "Generation failed, restoring previous SVG files"
+            cp assets/github-stats.svg.bak assets/github-stats.svg || true
+            cp assets/top-langs.svg.bak assets/top-langs.svg || true
+            exit 1
+          fi
 
-            if curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 180 \
-              -H "User-Agent: virgoone-profile-stats-updater" \
-              "$url" -o "$tmp_file"; then
-              if grep -q "<svg" "$tmp_file"; then
-                mv "$tmp_file" "$dest_file"
-                echo "Updated: $dest_file"
-                return 0
-              fi
-              echo "Downloaded response is not a valid SVG: $url"
-            else
-              echo "Fetch failed after retries: $url"
-            fi
-
-            if [ -f "$dest_file" ]; then
-              echo "Keep existing file: $dest_file"
-              rm -f "$tmp_file"
-              return 0
-            fi
-
-            echo "No existing fallback file, failing: $dest_file"
-            return 1
-          }
-
-          fetch_svg \
-            "https://github-readme-stats.vercel.app/api?username=${USERNAME}&show_icons=true&hide_border=true&title_color=ffffff&text_color=ffffff&icon_color=ffffff&bg_color=000000&cache_seconds=21600" \
-            "${stats_tmp}" \
-            "assets/github-stats.svg"
-
-          fetch_svg \
-            "https://github-readme-stats.vercel.app/api/top-langs/?username=${USERNAME}&layout=compact&hide_border=true&title_color=ffffff&text_color=ffffff&bg_color=000000&cache_seconds=21600" \
-            "${langs_tmp}" \
-            "assets/top-langs.svg"
+          rm -f assets/github-stats.svg.bak assets/top-langs.svg.bak
 
       - name: Commit and push if changed
         run: |
