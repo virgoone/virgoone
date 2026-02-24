@@ -33,21 +33,43 @@ jobs:
 
           stats_tmp="$(mktemp)"
           langs_tmp="$(mktemp)"
+          fetch_svg() {
+            local url="$1"
+            local tmp_file="$2"
+            local dest_file="$3"
 
-          curl -fsSL --retry 5 --retry-delay 2 \
+            if curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 180 \
+              -H "User-Agent: virgoone-profile-stats-updater" \
+              "$url" -o "$tmp_file"; then
+              if grep -q "<svg" "$tmp_file"; then
+                mv "$tmp_file" "$dest_file"
+                echo "Updated: $dest_file"
+                return 0
+              fi
+              echo "Downloaded response is not a valid SVG: $url"
+            else
+              echo "Fetch failed after retries: $url"
+            fi
+
+            if [ -f "$dest_file" ]; then
+              echo "Keep existing file: $dest_file"
+              rm -f "$tmp_file"
+              return 0
+            fi
+
+            echo "No existing fallback file, failing: $dest_file"
+            return 1
+          }
+
+          fetch_svg \
             "https://github-readme-stats.vercel.app/api?username=${USERNAME}&show_icons=true&hide_border=true&title_color=ffffff&text_color=ffffff&icon_color=ffffff&bg_color=000000&cache_seconds=21600" \
-            -o "${stats_tmp}"
+            "${stats_tmp}" \
+            "assets/github-stats.svg"
 
-          curl -fsSL --retry 5 --retry-delay 2 \
+          fetch_svg \
             "https://github-readme-stats.vercel.app/api/top-langs/?username=${USERNAME}&layout=compact&hide_border=true&title_color=ffffff&text_color=ffffff&bg_color=000000&cache_seconds=21600" \
-            -o "${langs_tmp}"
-
-          # Only publish valid SVG responses.
-          grep -q "<svg" "${stats_tmp}"
-          grep -q "<svg" "${langs_tmp}"
-
-          mv "${stats_tmp}" assets/github-stats.svg
-          mv "${langs_tmp}" assets/top-langs.svg
+            "${langs_tmp}" \
+            "assets/top-langs.svg"
 
       - name: Commit and push if changed
         run: |
