@@ -31,8 +31,8 @@ javascript  typescript  nodejs  vue  react  python  linux  git
 ## github
 
 <p>
-  <img height="160" src="https://github-readme-stats.vercel.app/api?username=virgoone&show_icons=true&hide_border=true&title_color=ffffff&text_color=ffffff&icon_color=ffffff&bg_color=000000" alt="stats" />
-  <img height="160" src="https://github-readme-stats.vercel.app/api/top-langs/?username=virgoone&layout=compact&hide_border=true&title_color=ffffff&text_color=ffffff&bg_color=000000" alt="top languages" />
+  <img height="160" src="./assets/github-stats.svg" alt="stats" />
+  <img height="160" src="./assets/top-langs.svg" alt="top languages" />
 </p>
 
 <p>

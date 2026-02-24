@@ -1,0 +1,57 @@
+name: Update Profile Stats
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch SVG stats
+        env:
+          USERNAME: virgoone
+        run: |
+          set -euo pipefail
+
+          mkdir -p assets
+
+          stats_tmp="$(mktemp)"
+          langs_tmp="$(mktemp)"
+
+          curl -fsSL --retry 5 --retry-delay 2 \
+            "https://github-readme-stats.vercel.app/api?username=${USERNAME}&show_icons=true&hide_border=true&title_color=ffffff&text_color=ffffff&icon_color=ffffff&bg_color=000000&cache_seconds=21600" \
+            -o "${stats_tmp}"
+
+          curl -fsSL --retry 5 --retry-delay 2 \
+            "https://github-readme-stats.vercel.app/api/top-langs/?username=${USERNAME}&layout=compact&hide_border=true&title_color=ffffff&text_color=ffffff&bg_color=000000&cache_seconds=21600" \
+            -o "${langs_tmp}"
+
+          # Only publish valid SVG responses.
+          grep -q "<svg" "${stats_tmp}"
+          grep -q "<svg" "${langs_tmp}"
+
+          mv "${stats_tmp}" assets/github-stats.svg
+          mv "${langs_tmp}" assets/top-langs.svg
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/github-stats.svg assets/top-langs.svg
+          git commit -m "chore: update profile stats"
+          git push
