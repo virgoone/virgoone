@@ -2,6 +2,13 @@ name: Update Profile Stats
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+      - assets/**
+      - .github/workflows/update-profile-stats.yml
   schedule:
     - cron: "0 3 * * *"
 
